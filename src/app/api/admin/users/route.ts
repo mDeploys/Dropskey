@@ -1,6 +1,4 @@
-import { createSupabaseServerClientComponent } from '@/lib/supabase/server'; // Updated import
-import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient, createSupabaseServerClientComponent } from '@/lib/supabase/server'; // Updated import
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic'; // Added to force dynamic rendering
@@ -33,20 +31,10 @@ export async function GET() {
       );
     }
 
-    // Create an admin client
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const supabaseAdmin = await createAdminClient();
 
     // Fetch profiles
-    const { data: profiles, error: profilesError } = await supabase
+    const { data: profiles, error: profilesError } = await supabaseAdmin
       .from('profiles')
       .select('id, first_name, last_name, created_at')
       .order('created_at', { ascending: false });

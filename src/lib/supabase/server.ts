@@ -209,8 +209,9 @@ export const getAllUserProfilesForAdmin = async (cookieStore?: ReturnType<typeof
       return { data: null, error: 'Unauthorized: Admin access required' };
     }
     
-    // Get all profiles
-    const { data: profiles, error } = await supabase
+    // Cross-user profile reads must bypass profiles RLS after the admin check above.
+    const supabaseAdmin = await createAdminClient();
+    const { data: profiles, error } = await supabaseAdmin
       .from('profiles')
       .select('*');
 

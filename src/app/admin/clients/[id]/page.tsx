@@ -1,7 +1,6 @@
 "use server"
 
-import { createSupabaseServerClientComponent } from "@/lib/supabase/server"
-import { cookies } from "next/headers"
+import { createAdminClient, createSupabaseServerClientComponent } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import {
   Card,
@@ -29,16 +28,18 @@ export default async function ClientPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', session.user.id)
     .single()
 
-  if (profile?.role !== 'admin') {
+  if (!profile?.is_admin) {
     redirect("/account")
   }
 
+  const supabaseAdmin = await createAdminClient()
+
   // Fetch client details
-  const { data: client, error } = await supabase
+  const { data: client, error } = await supabaseAdmin
     .from('profiles')
     .select('*')
     .eq('id', params.id)
@@ -80,7 +81,7 @@ export default async function ClientPage({
               <div>
                 <h3 className="font-medium">Account Status</h3>
                 <p className="text-sm text-muted-foreground">
-                  {client.role === 'admin' ? 'Admin' : 'Customer'}
+                  {client.is_admin ? 'Admin' : 'Customer'}
                 </p>
               </div>
               <div>

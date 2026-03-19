@@ -1,7 +1,6 @@
 "use server"
 
-import { createSupabaseServerClientComponent } from "@/lib/supabase/server" // Updated import
-import { cookies } from "next/headers"
+import { createAdminClient, createSupabaseServerClientComponent } from "@/lib/supabase/server" // Updated import
 import { notFound, redirect } from "next/navigation"
 import {
   Card,
@@ -36,16 +35,18 @@ export default async function ClientOrdersPage({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('is_admin')
     .eq('id', session.user.id)
     .single()
 
-  if (profile?.role !== 'admin') {
+  if (!profile?.is_admin) {
     redirect("/account")
   }
 
+  const supabaseAdmin = await createAdminClient()
+
   // Fetch client details
-  const { data: client, error: clientError } = await supabase
+  const { data: client, error: clientError } = await supabaseAdmin
     .from('profiles')
     .select('first_name, last_name, email')
     .eq('id', params.id)
@@ -57,7 +58,7 @@ export default async function ClientOrdersPage({
   }
 
   // Fetch orders for the client
-  const { data: orders, error: ordersError } = await supabase
+  const { data: orders, error: ordersError } = await supabaseAdmin
     .from('orders')
     .select(`
       *,

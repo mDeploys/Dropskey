@@ -1,4 +1,4 @@
-import { createSupabaseServerClientComponent } from "@/lib/supabase/server"
+import { createAdminClient, createSupabaseServerClientComponent } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import {
   Card,
@@ -30,7 +30,7 @@ interface Client {
 
 export default async function AdminClientsPage() {
   const supabase = await createSupabaseServerClientComponent()
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
     redirect("/login")
@@ -51,8 +51,10 @@ export default async function AdminClientsPage() {
   let clients: Client[] = []
   
   try {
-    // Fetch clients with error handling
-    const { data, error } = await supabase
+    const supabaseAdmin = await createAdminClient()
+
+    // Fetch clients with elevated access after the admin check above.
+    const { data, error } = await supabaseAdmin
       .from('profiles')
       .select('id, first_name, last_name, company_name, created_at')
       .order('created_at', { ascending: false }) as { data: Client[] | null, error: any };
