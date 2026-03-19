@@ -23,6 +23,13 @@ export default function RootLayout({
 }) {
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID
   const gaMeasurementId = 'G-BNKL9RH1XV' // Your Google Analytics 4 Measurement ID
+  const publicEnv = {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? null,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? null,
+    NEXT_PUBLIC_PAYPAL_CLIENT_ID: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ?? null,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null,
+    NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL ?? null,
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -52,6 +59,9 @@ export default function RootLayout({
             fbq('init', '1336422264541509');
             fbq('track', 'PageView');
           `}
+        </Script>
+        <Script id="public-env" strategy="beforeInteractive">
+          {`window.__PUBLIC_ENV = ${JSON.stringify(publicEnv)};`}
         </Script>
       </head>
       <body className={inter.className}>

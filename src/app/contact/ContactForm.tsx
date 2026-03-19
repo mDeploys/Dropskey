@@ -10,6 +10,7 @@ import Turnstile from "react-turnstile"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { getPublicEnv } from "@/lib/public-env"
 import {
   Form,
   FormControl,
@@ -24,6 +25,7 @@ import { Loader2 } from "lucide-react"
 const contactFormSchema = z.object({
   name: z.string().min(1, "Name is required."),
   email: z.string().email("Please enter a valid email address."),
+  subject: z.string().min(1, "Subject is required."),
   message: z.string().min(10, "Message must be at least 10 characters.").max(1000, "Message cannot exceed 1000 characters."),
 })
 
@@ -35,14 +37,28 @@ export default function ContactForm() {
     defaultValues: {
       name: "",
       email: "",
+      subject: "",
       message: "",
     },
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileError, setTurnstileError] = useState<string | null>(null)
+  const siteKey = getPublicEnv().NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || ""
+  const isTurnstileConfigured = Boolean(siteKey)
 
   async function onSubmit(values: ContactFormValues) {
+    if (!isTurnstileConfigured) {
+      toast.error("Contact form protection is not configured. Add NEXT_PUBLIC_TURNSTILE_SITE_KEY and redeploy.")
+      return
+    }
+
+    if (!turnstileToken) {
+      toast.error("Complete the security check before sending your message.")
+      return
+    }
+
     setIsSubmitting(true)
     const toastId = toast.loading("Sending your message...")
 
@@ -56,7 +72,8 @@ export default function ContactForm() {
       if (res.ok) {
         toast.success("Message sent successfully!", { id: toastId })
         form.reset()
-        // Reset turnstile after successful submission if needed, though it's often handled automatically
+        setTurnstileToken(null)
+        setTurnstileError(null)
       } else {
         const errorData = await res.json()
         toast.error(`Failed to send message: ${errorData.error || "An unknown error occurred."}`, { id: toastId })
@@ -106,6 +123,19 @@ export default function ContactForm() {
             />
             <FormField
               control={form.control}
+              name="subject"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subject</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Regarding my order..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="message"
               render={({ field }) => (
                 <FormItem>
@@ -121,13 +151,36 @@ export default function ContactForm() {
                 </FormItem>
               )}
             />
-            <Turnstile
-              sitekey={(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY as string) || ((typeof window !== 'undefined' && (window as any).__PUBLIC_ENV?.NEXT_PUBLIC_TURNSTILE_SITE_KEY) as string)}
-              onVerify={(token: string) => setTurnstileToken(token)}
-              onExpire={() => setTurnstileToken(null)}
-              onError={() => toast.error("Turnstile challenge failed. Please refresh the page.")}
-            />
-            <Button type="submit" className="w-full" disabled={isSubmitting || !turnstileToken}>
+
+            {isTurnstileConfigured ? (
+              <div className="space-y-2">
+                <Turnstile
+                  sitekey={siteKey}
+                  onVerify={(token: string) => {
+                    setTurnstileToken(token)
+                    setTurnstileError(null)
+                  }}
+                  onExpire={() => setTurnstileToken(null)}
+                  onError={() => {
+                    setTurnstileToken(null)
+                    setTurnstileError("Security check failed to load. Please refresh the page and try again.")
+                  }}
+                />
+                {turnstileError ? (
+                  <p className="text-sm text-red-600">{turnstileError}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Complete the security check to enable the send button.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                Cloudflare Turnstile is not configured. Add <code>NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> to your environment and redeploy.
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isSubmitting || !isTurnstileConfigured || !turnstileToken}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
