@@ -282,6 +282,43 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     }
   }
 
+  const renderCaptchaBlock = () => (
+    <div className="space-y-3">
+      {isCaptchaConfigured ? (
+        <Turnstile
+          sitekey={turnstileSiteKey}
+          onVerify={(token, boundTurnstile) => {
+            turnstileRef.current = boundTurnstile
+            setTurnstileToken(token)
+            setTurnstileError(null)
+          }}
+          onLoad={(_, boundTurnstile) => {
+            turnstileRef.current = boundTurnstile
+          }}
+          onExpire={() => {
+            setTurnstileToken(null)
+          }}
+          onError={() => {
+            setTurnstileToken(null)
+            setTurnstileError("Security check failed to load. Refresh the page and try again.")
+          }}
+        />
+      ) : (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Turnstile is not configured for the auth dialog. Add <code>NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> and redeploy if CAPTCHA is enabled in Supabase Auth.
+        </div>
+      )}
+
+      {turnstileError ? (
+        <p className="text-sm text-red-600">{turnstileError}</p>
+      ) : isCaptchaConfigured ? (
+        <p className="text-sm text-muted-foreground">
+          Complete the security check before continuing.
+        </p>
+      ) : null}
+    </div>
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full sm:max-w-md">
@@ -294,54 +331,6 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
         <div className="space-y-6 py-2">
           <div className="space-y-4">
-            <div className="space-y-3">
-              {isCaptchaConfigured ? (
-                <Turnstile
-                  sitekey={turnstileSiteKey}
-                  onVerify={(token, boundTurnstile) => {
-                    turnstileRef.current = boundTurnstile
-                    setTurnstileToken(token)
-                    setTurnstileError(null)
-                  }}
-                  onLoad={(_, boundTurnstile) => {
-                    turnstileRef.current = boundTurnstile
-                  }}
-                  onExpire={() => {
-                    setTurnstileToken(null)
-                  }}
-                  onError={() => {
-                    setTurnstileToken(null)
-                    setTurnstileError("Security check failed to load. Refresh the page and try again.")
-                  }}
-                />
-              ) : (
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  Turnstile is not configured for the auth dialog. Add <code>NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> and redeploy if CAPTCHA is enabled in Supabase Auth.
-                </div>
-              )}
-
-              {turnstileError ? (
-                <p className="text-sm text-red-600">{turnstileError}</p>
-              ) : isCaptchaConfigured ? (
-                <p className="text-sm text-muted-foreground">
-                  Complete the security check to enable authentication.
-                </p>
-              ) : null}
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogleAuth}
-              disabled={isSubmitting || (isCaptchaConfigured && !turnstileToken)}
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
-              Continue with Google
-            </Button>
-
-            <Separator />
-
             <Tabs value={view} onValueChange={(value) => setView(value as AuthView)} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="sign_in">Sign In</TabsTrigger>
@@ -382,6 +371,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                       placeholder="Enter your password"
                     />
                   </div>
+
+                  {renderCaptchaBlock()}
 
                   {emailError ? <p className="text-sm text-red-600">{emailError}</p> : null}
 
@@ -435,6 +426,8 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                     Registration is limited to Gmail, Hotmail, Outlook, or the admin account.
                   </p>
 
+                  {renderCaptchaBlock()}
+
                   {emailError ? <p className="text-sm text-red-600">{emailError}</p> : null}
 
                   <Button
@@ -448,6 +441,24 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                 </form>
               </TabsContent>
             </Tabs>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Google sign-in uses the same security check above.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleGoogleAuth}
+                disabled={isSubmitting || (isCaptchaConfigured && !turnstileToken)}
+              >
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
+                Continue with Google
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
