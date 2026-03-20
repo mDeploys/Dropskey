@@ -146,7 +146,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
             <Auth
               key={open ? "auth-dialog-open" : "auth-dialog-closed"}
               supabaseClient={supabase}
-              providers={['google', 'github']}
+              providers={['google']}
               appearance={{
                 theme: ThemeSupa,
                 variables: {

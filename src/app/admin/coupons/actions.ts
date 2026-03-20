@@ -1,9 +1,7 @@
 "use server"
 
-import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
-import { v4 as uuidv4 } from 'uuid';
-import { createSupabaseServerClientComponent } from '@/lib/supabase/server';
+import { createAdminClient, createSupabaseServerClientComponent } from '@/lib/supabase/server';
 
 interface CouponData {
   code: string;
@@ -53,16 +51,36 @@ export async function deleteCoupon(id: string) {
 
 export async function fetchUsersForAssignment() {
   const supabase = await createSupabaseServerClientComponent();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const { data, error } = await supabase
+  if (!user) {
+    return { data: null, error: "User not authenticated" };
+  }
+
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name")
-    .order("id", { ascending: false }); // Changed from 'created_at' to 'id'
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile?.is_admin) {
+    return { data: null, error: "Unauthorized: Admin access required" };
+  }
+
+  const supabaseAdmin = await createAdminClient();
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("id, first_name, last_name, email, is_admin")
+    .or("is_admin.is.null,is_admin.eq.false")
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error("Error fetching users:", error);
     return { data: null, error: error.message };
   }
 
-  return { data, error: null };
+  return {
+    data: (data || []).filter((assignmentUser) => assignmentUser.id !== user.id),
+    error: null,
+  };
 }

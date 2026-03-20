@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
-import { useSession } from "@/context/session-context"
 import {
   Select,
   SelectContent,
@@ -35,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createCoupon, updateCoupon, deleteCoupon } from "@/app/admin/coupons/actions"
+import { createCoupon, updateCoupon, deleteCoupon, fetchUsersForAssignment } from "@/app/admin/coupons/actions"
 import { Tables } from "@/types/supabase" // Import Tables type
 
 interface CouponFormProps {
@@ -62,9 +61,8 @@ const couponSchema = z.object({
 type CouponFormValues = z.infer<typeof couponSchema>
 
 export function CouponForm({ coupon }: CouponFormProps): JSX.Element {
-  const { supabase } = useSession() // Get supabase from context
   const [isOpen, setOpen] = useState(false)
-  const [users, setUsers] = useState<{ id: string; first_name: string | null; last_name: string | null }[]>([]);
+  const [users, setUsers] = useState<{ id: string; first_name: string | null; last_name: string | null; email: string | null }[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   const form = useForm<CouponFormValues>({
@@ -81,13 +79,7 @@ export function CouponForm({ coupon }: CouponFormProps): JSX.Element {
     const loadUsers = async () => {
       try {
         setIsLoadingUsers(true);
-        if (!supabase) {
-          throw new Error("Supabase client not initialized");
-        }
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name')
-          .order('id', { ascending: false });
+        const { data, error } = await fetchUsersForAssignment();
 
         if (error) throw error;
         
@@ -101,7 +93,7 @@ export function CouponForm({ coupon }: CouponFormProps): JSX.Element {
     };
 
     if (isOpen) loadUsers();
-  }, [isOpen, supabase]); // Add supabase to dependencies
+  }, [isOpen]);
 
   const onSubmit = async (values: CouponFormValues) => {
     console.log("CouponForm onSubmit triggered with values:", values); // New client-side log
@@ -201,10 +193,16 @@ export function CouponForm({ coupon }: CouponFormProps): JSX.Element {
                       <SelectItem value="public">Public (Any user)</SelectItem>
                       {isLoadingUsers ? (
                         <SelectItem value="loading" disabled>Loading users...</SelectItem>
+                      ) : users.length === 0 ? (
+                        <SelectItem value="no-users" disabled>No clients available</SelectItem>
                       ) : (
                         users.map((user) => (
                           <SelectItem key={user.id} value={user.id}>
-                            {user.first_name} {user.last_name}
+                            {(() => {
+                              const displayName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim()
+                              if (displayName && user.email) return `${displayName} (${user.email})`
+                              return displayName || user.email || `User ${user.id.slice(0, 8)}`
+                            })()}
                           </SelectItem>
                         ))
                       )}
