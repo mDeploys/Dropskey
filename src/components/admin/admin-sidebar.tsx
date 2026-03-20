@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Package, Tag, X, ClipboardList, Users, Key, Percent, Clock } from "lucide-react"
+import { Home, Package, Tag, X, ClipboardList, Users, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -19,8 +19,6 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     { href: "/admin/orders", label: "Orders", icon: ClipboardList },
     { href: "/admin/products", label: "Products", icon: Package },
     { href: "/admin/coupons", label: "Coupons", icon: Tag },
-    { href: "/admin/generate-codes", label: "Generate Codes", icon: Key },
-    { href: "/admin/user-discounts", label: "User Discounts", icon: Percent },
     { href: "/admin/clients", label: "Clients", icon: Users },
     { href: "/admin/auto-cancel", label: "Auto Cancel", icon: Clock },
   ]

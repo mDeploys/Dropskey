@@ -50,27 +50,44 @@ export interface Database {
           assigned_user_id: string | null
           code: string
           created_at: string | null
-          discount_percent: number
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
           id: string
+          is_active: boolean
           is_applied: boolean | null
         }
         Insert: {
           assigned_user_id?: string | null
           code: string
           created_at?: string | null
-          discount_percent: number
+          discount_type?: string
+          discount_value: number
+          expires_at?: string | null
           id?: string
+          is_active?: boolean
           is_applied?: boolean | null
         }
         Update: {
           assigned_user_id?: string | null
           code?: string
           created_at?: string | null
-          discount_percent?: number
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
           id?: string
+          is_active?: boolean
           is_applied?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "coupons_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
