@@ -71,7 +71,6 @@ export async function fetchUsersForAssignment() {
   const { data, error } = await supabaseAdmin
     .from("profiles")
     .select("id, first_name, last_name, email, is_admin")
-    .or("is_admin.is.null,is_admin.eq.false")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -79,8 +78,5 @@ export async function fetchUsersForAssignment() {
     return { data: null, error: error.message };
   }
 
-  return {
-    data: (data || []).filter((assignmentUser) => assignmentUser.id !== user.id),
-    error: null,
-  };
+  return { data: data || [], error: null };
 }
