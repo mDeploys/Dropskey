@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -61,6 +62,7 @@ const couponSchema = z.object({
 type CouponFormValues = z.infer<typeof couponSchema>
 
 export function CouponForm({ coupon }: CouponFormProps): JSX.Element {
+  const router = useRouter()
   const [isOpen, setOpen] = useState(false)
   const [users, setUsers] = useState<{ id: string; first_name: string | null; last_name: string | null; email: string | null }[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -118,6 +120,7 @@ export function CouponForm({ coupon }: CouponFormProps): JSX.Element {
 
       toast.success(`Coupon ${coupon ? "updated" : "created"} successfully!`, { id: toastId })
       setOpen(false)
+      router.refresh()
     } catch (error: any) {
       toast.error(error.message || "An unexpected error occurred.", { id: toastId })
     }
@@ -133,6 +136,7 @@ export function CouponForm({ coupon }: CouponFormProps): JSX.Element {
         }
         toast.success("Coupon deleted successfully!", { id: toastId })
         setOpen(false)
+        router.refresh()
       } catch (error: any) {
         toast.error(error.message || "Failed to delete coupon.", { id: toastId })
       }

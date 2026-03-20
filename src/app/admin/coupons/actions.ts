@@ -10,10 +10,35 @@ interface CouponData {
   is_applied: boolean;
 }
 
-export async function createCoupon(formData: CouponData) {
+async function getAdminCouponsClient() {
   const supabase = await createSupabaseServerClientComponent();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { supabaseAdmin: null, error: "User not authenticated" };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile?.is_admin) {
+    return { supabaseAdmin: null, error: "Unauthorized: Admin access required" };
+  }
+
+  const supabaseAdmin = await createAdminClient();
+  return { supabaseAdmin, error: null };
+}
+
+export async function createCoupon(formData: CouponData) {
+  const { supabaseAdmin, error: adminError } = await getAdminCouponsClient();
+  if (adminError || !supabaseAdmin) {
+    return { error: adminError || "Unauthorized" };
+  }
   console.log("Attempting to create coupon with data:", formData); // Added log
-  const { error } = await supabase.from("coupons").insert([formData]);
+  const { error } = await supabaseAdmin.from("coupons").insert([formData]);
   if (error) {
     console.error("Error creating coupon:", error); // Added log
     return { error: error.message };
@@ -24,9 +49,12 @@ export async function createCoupon(formData: CouponData) {
 }
 
 export async function updateCoupon(id: string, formData: CouponData) {
-  const supabase = await createSupabaseServerClientComponent();
+  const { supabaseAdmin, error: adminError } = await getAdminCouponsClient();
+  if (adminError || !supabaseAdmin) {
+    return { error: adminError || "Unauthorized" };
+  }
   console.log(`Attempting to update coupon ${id} with data:`, formData); // Added log
-  const { error } = await supabase.from("coupons").update(formData).eq("id", id);
+  const { error } = await supabaseAdmin.from("coupons").update(formData).eq("id", id);
   if (error) {
     console.error(`Error updating coupon ${id}:`, error); // Added log
     return { error: error.message };
@@ -37,9 +65,12 @@ export async function updateCoupon(id: string, formData: CouponData) {
 }
 
 export async function deleteCoupon(id: string) {
-  const supabase = await createSupabaseServerClientComponent();
+  const { supabaseAdmin, error: adminError } = await getAdminCouponsClient();
+  if (adminError || !supabaseAdmin) {
+    return { error: adminError || "Unauthorized" };
+  }
   console.log(`Attempting to delete coupon with ID: ${id}`); // Added log
-  const { error } = await supabase.from("coupons").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("coupons").delete().eq("id", id);
   if (error) {
     console.error(`Error deleting coupon ${id}:`, error); // Added log
     return { error: error.message };
@@ -50,24 +81,10 @@ export async function deleteCoupon(id: string) {
 }
 
 export async function fetchUsersForAssignment() {
-  const supabase = await createSupabaseServerClientComponent();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { data: null, error: "User not authenticated" };
+  const { supabaseAdmin, error: adminError } = await getAdminCouponsClient();
+  if (adminError || !supabaseAdmin) {
+    return { data: null, error: adminError || "Unauthorized" };
   }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError || !profile?.is_admin) {
-    return { data: null, error: "Unauthorized: Admin access required" };
-  }
-
-  const supabaseAdmin = await createAdminClient();
   const { data, error } = await supabaseAdmin
     .from("profiles")
     .select("id, first_name, last_name, email, is_admin")
