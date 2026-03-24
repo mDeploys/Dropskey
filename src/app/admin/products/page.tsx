@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ProductForm } from "@/components/admin/product-form"
-import { Button } from "@/components/ui/button"
+import { GoogleMerchantSyncCard } from "@/components/admin/google-merchant-sync-card"
 import { Product } from "@/types/product"
 import { createSupabaseServerClientComponent } from "@/lib/supabase/server"
 import Image from "next/image"
@@ -29,6 +29,7 @@ export default async function ProductsPage() {
         <h1 className="text-3xl font-bold">Products</h1>
         <ProductForm />
       </div>
+      <GoogleMerchantSyncCard />
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
