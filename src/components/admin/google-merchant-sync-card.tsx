@@ -230,8 +230,17 @@ export function GoogleMerchantSyncCard() {
         ) : null}
 
         {summary ? (
-          <Alert variant={summary.failedCount > 0 ? "destructive" : "default"}>
-            <AlertTitle>Latest sync result</AlertTitle>
+          <Alert
+            variant={summary.failedCount > 0 ? "destructive" : "default"}
+            className={
+              summary.failedCount > 0
+                ? undefined
+                : "border-emerald-200 bg-emerald-50 text-emerald-900 [&>svg]:text-emerald-700"
+            }
+          >
+            <AlertTitle className={summary.failedCount > 0 ? undefined : "text-emerald-900"}>
+              Latest sync result
+            </AlertTitle>
             <AlertDescription className="space-y-2">
               <p>
                 Synced {summary.syncedCount} product{summary.syncedCount === 1 ? "" : "s"}.

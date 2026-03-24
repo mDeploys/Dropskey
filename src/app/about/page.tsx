@@ -147,13 +147,13 @@ export default function AboutPage() {
       </section>
 
       {/* Call to Action */}
-      <section className="bg-blue-600 text-white py-16 text-center">
+      <section className="bg-[#ff7300] text-white py-16 text-center">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold mb-4">Ready to Explore?</h2>
-          <p className="text-lg text-blue-100 mb-8">
+          <p className="text-lg text-orange-100 mb-8">
             Browse our extensive catalog of digital solutions and find what you need today.
           </p>
-          <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+          <Button asChild size="lg" className="bg-white text-[#ff7300] hover:bg-gray-100">
             <Link href="/shop">Shop Now</Link>
           </Button>
         </div>
