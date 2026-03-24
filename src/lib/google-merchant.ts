@@ -1,4 +1,4 @@
-import { createSign } from "crypto";
+import { createPrivateKey, createSign } from "crypto";
 import type { Tables } from "@/types/supabase";
 
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -97,7 +97,33 @@ function normalizePrivateKey(value: string | null) {
     return null;
   }
 
-  return value.replace(/\\n/g, "\n");
+  let normalized = value.trim();
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1);
+  }
+
+  normalized = normalized.replace(/\r/g, "").replace(/\\n/g, "\n").trim();
+
+  const hasBeginMarker = normalized.includes("-----BEGIN ");
+  const hasEndMarker = normalized.includes("-----END ");
+
+  if (!hasBeginMarker || !hasEndMarker) {
+    const keyBody = normalized
+      .replace(/-----BEGIN [^-]+-----/g, "")
+      .replace(/-----END [^-]+-----/g, "")
+      .replace(/\s+/g, "\n")
+      .trim();
+
+    if (keyBody) {
+      normalized = `-----BEGIN PRIVATE KEY-----\n${keyBody}\n-----END PRIVATE KEY-----`;
+    }
+  }
+
+  return normalized.endsWith("\n") ? normalized : `${normalized}\n`;
 }
 
 function getEnvList(value: string | undefined, fallback: string[]) {
@@ -179,12 +205,25 @@ async function getAccessToken(config: GoogleMerchantConfig) {
     })
   )}`;
 
+  let privateKey;
+
+  try {
+    privateKey = createPrivateKey({
+      key: config.privateKey,
+      format: "pem",
+    });
+  } catch {
+    throw new Error(
+      "Google Merchant private key could not be decoded. Check GOOGLE_MERCHANT_PRIVATE_KEY formatting in Vercel env."
+    );
+  }
+
   const signer = createSign("RSA-SHA256");
   signer.update(unsignedJwt);
   signer.end();
 
   const signature = signer
-    .sign(config.privateKey)
+    .sign(privateKey)
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
