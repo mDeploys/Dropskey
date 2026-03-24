@@ -27,6 +27,7 @@ export interface GoogleMerchantConfig {
   merchantAccountId: string | null;
   serviceAccountEmail: string | null;
   privateKey: string | null;
+  developerEmail: string | null;
   dataSourceDisplayName: string;
   feedLabel: string;
   contentLanguage: string;
@@ -48,6 +49,11 @@ export interface GoogleMerchantDataSource {
     feedLabel?: string;
     contentLanguage?: string;
   };
+}
+
+export interface GoogleMerchantDeveloperRegistration {
+  name: string;
+  gcpIds?: string[];
 }
 
 function base64UrlEncode(input: string | Buffer) {
@@ -139,6 +145,7 @@ export function getGoogleMerchantConfig(): GoogleMerchantConfig {
   const merchantAccountId = process.env.GOOGLE_MERCHANT_ACCOUNT_ID?.trim() || null;
   const serviceAccountEmail = process.env.GOOGLE_MERCHANT_SERVICE_ACCOUNT_EMAIL?.trim() || null;
   const privateKey = normalizePrivateKey(process.env.GOOGLE_MERCHANT_PRIVATE_KEY?.trim() || null);
+  const developerEmail = process.env.GOOGLE_MERCHANT_DEVELOPER_EMAIL?.trim() || null;
   const dataSourceDisplayName =
     process.env.GOOGLE_MERCHANT_DATA_SOURCE_NAME?.trim() || "Dropskey API Products";
   const feedLabel = (process.env.GOOGLE_MERCHANT_FEED_LABEL?.trim() || "SA").toUpperCase();
@@ -170,6 +177,7 @@ export function getGoogleMerchantConfig(): GoogleMerchantConfig {
     merchantAccountId,
     serviceAccountEmail,
     privateKey,
+    developerEmail,
     dataSourceDisplayName,
     feedLabel,
     contentLanguage,
@@ -331,6 +339,25 @@ export async function ensureGoogleMerchantDataSource(config: GoogleMerchantConfi
   );
 
   return { dataSource: createdDataSource, created: true };
+}
+
+export async function registerGoogleMerchantGcpProject(config: GoogleMerchantConfig, developerEmail: string) {
+  if (!config.merchantAccountId) {
+    throw new Error("Google Merchant account ID is missing.");
+  }
+
+  const accountName = `accounts/${config.merchantAccountId}`;
+
+  return merchantRequest<GoogleMerchantDeveloperRegistration>(
+    config,
+    `https://merchantapi.googleapis.com/accounts/v1/${accountName}/developerRegistration:registerGcp`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        developerEmail,
+      }),
+    }
+  );
 }
 
 function buildGoogleMerchantProductInput(product: GoogleMerchantProduct, config: GoogleMerchantConfig) {

@@ -6,6 +6,7 @@ import {
   ensureGoogleMerchantDataSource,
   getGoogleMerchantConfig,
   listGoogleMerchantDataSources,
+  registerGoogleMerchantGcpProject,
   upsertGoogleMerchantProduct,
   type GoogleMerchantProduct,
 } from "@/lib/google-merchant";
@@ -33,11 +34,11 @@ async function getAdminContext() {
     return { supabaseAdmin: null, error: "Unauthorized: Admin access required" };
   }
 
-  return { supabaseAdmin: await createAdminClient(), error: null };
+  return { supabaseAdmin: await createAdminClient(), user, error: null };
 }
 
 export async function getGoogleMerchantStatus() {
-  const { error: adminError } = await getAdminContext();
+  const { user, error: adminError } = await getAdminContext();
   if (adminError) {
     return { error: adminError, data: null };
   }
@@ -55,6 +56,7 @@ export async function getGoogleMerchantStatus() {
         contentLanguage: config.contentLanguage,
         targetCountries: config.targetCountries,
         currencyCode: config.currencyCode,
+        developerEmail: config.developerEmail || user?.email || null,
         dataSourceFound: false,
         dataSourceName: null,
       },
@@ -79,6 +81,7 @@ export async function getGoogleMerchantStatus() {
         contentLanguage: config.contentLanguage,
         targetCountries: config.targetCountries,
         currencyCode: config.currencyCode,
+        developerEmail: config.developerEmail || user?.email || null,
         dataSourceFound: Boolean(dataSource),
         dataSourceName: dataSource?.name ?? null,
       },
@@ -145,6 +148,47 @@ export async function syncProductsToGoogleMerchant() {
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Failed to sync products to Google Merchant",
+      data: null,
+    };
+  }
+}
+
+export async function registerGoogleMerchantDeveloperProject() {
+  const { user, error: adminError } = await getAdminContext();
+  if (adminError) {
+    return { error: adminError, data: null };
+  }
+
+  const config = getGoogleMerchantConfig();
+  if (config.missingEnvVars.length > 0) {
+    return {
+      error: `Missing Google Merchant env vars: ${config.missingEnvVars.join(", ")}`,
+      data: null,
+    };
+  }
+
+  const developerEmail = config.developerEmail || user?.email || null;
+
+  if (!developerEmail) {
+    return {
+      error: "No developer email is available. Set GOOGLE_MERCHANT_DEVELOPER_EMAIL or use an admin account with an email.",
+      data: null,
+    };
+  }
+
+  try {
+    const registration = await registerGoogleMerchantGcpProject(config, developerEmail);
+
+    return {
+      error: null,
+      data: {
+        developerEmail,
+        registration,
+      },
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Failed to register Google Cloud project with Merchant Center",
       data: null,
     };
   }

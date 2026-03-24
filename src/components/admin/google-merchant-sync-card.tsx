@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { Loader2, RefreshCcw, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
-import { getGoogleMerchantStatus, syncProductsToGoogleMerchant } from "@/app/admin/products/google-merchant-actions";
+import {
+  getGoogleMerchantStatus,
+  registerGoogleMerchantDeveloperProject,
+  syncProductsToGoogleMerchant,
+} from "@/app/admin/products/google-merchant-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +22,7 @@ interface MerchantStatus {
   contentLanguage: string;
   targetCountries: string[];
   currencyCode: string;
+  developerEmail: string | null;
   dataSourceFound: boolean;
   dataSourceName: string | null;
 }
@@ -30,12 +35,43 @@ interface SyncSummary {
   failures: Array<{ productId: number; productName: string; message: string }>;
 }
 
+interface ParsedMerchantError {
+  message: string;
+  isGcpNotRegistered: boolean;
+}
+
+function parseMerchantError(error: string): ParsedMerchantError {
+  try {
+    const parsed = JSON.parse(error) as {
+      error?: {
+        message?: string;
+        details?: Array<{
+          metadata?: Record<string, string>;
+        }>;
+      };
+    };
+
+    const message = parsed.error?.message || error;
+    const isGcpNotRegistered = parsed.error?.details?.some(
+      (detail) => detail.metadata?.REASON === "GCP_NOT_REGISTERED"
+    ) || false;
+
+    return { message, isGcpNotRegistered };
+  } catch {
+    return {
+      message: error,
+      isGcpNotRegistered: error.includes("GCP_NOT_REGISTERED") || error.includes("not registered with the merchant account"),
+    };
+  }
+}
+
 export function GoogleMerchantSyncCard() {
   const [status, setStatus] = useState<MerchantStatus | null>(null);
   const [summary, setSummary] = useState<SyncSummary | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRegisteringProject, setIsRegisteringProject] = useState(false);
 
   const loadStatus = async () => {
     setIsLoadingStatus(true);
@@ -78,6 +114,24 @@ export function GoogleMerchantSyncCard() {
     await loadStatus();
   };
 
+  const handleRegisterProject = async () => {
+    setIsRegisteringProject(true);
+    const toastId = toast.loading("Registering Google Cloud project with Merchant Center...");
+
+    const result = await registerGoogleMerchantDeveloperProject();
+    setIsRegisteringProject(false);
+
+    if (result.error || !result.data) {
+      toast.error(result.error || "Failed to register Google Cloud project.", { id: toastId });
+      return;
+    }
+
+    toast.success(`Registered project with Merchant Center using ${result.data.developerEmail}.`, { id: toastId });
+    await loadStatus();
+  };
+
+  const parsedStatusError = statusError ? parseMerchantError(statusError) : null;
+
   return (
     <Card className="mb-8">
       <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -92,6 +146,12 @@ export function GoogleMerchantSyncCard() {
             {isLoadingStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
             Refresh Status
           </Button>
+          {parsedStatusError?.isGcpNotRegistered ? (
+            <Button type="button" variant="secondary" onClick={handleRegisterProject} disabled={isRegisteringProject}>
+              {isRegisteringProject ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Register GCP Project
+            </Button>
+          ) : null}
           <Button type="button" onClick={handleSync} disabled={isLoadingStatus || isSyncing || !status?.configured}>
             {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
             Sync All Products
@@ -103,7 +163,15 @@ export function GoogleMerchantSyncCard() {
         {statusError ? (
           <Alert variant="destructive">
             <AlertTitle>Unable to check Google Merchant</AlertTitle>
-            <AlertDescription>{statusError}</AlertDescription>
+            <AlertDescription className="space-y-2">
+              <p>{parsedStatusError?.message || statusError}</p>
+              {parsedStatusError?.isGcpNotRegistered ? (
+                <p>
+                  The Merchant Center account can see your service account, but the Google Cloud project still needs the
+                  one-time developer registration link.
+                </p>
+              ) : null}
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -139,6 +207,10 @@ export function GoogleMerchantSyncCard() {
               <div className="rounded-lg border p-4">
                 <p className="text-sm text-muted-foreground">Target Market</p>
                 <p className="mt-1 font-medium">{status.targetCountries.join(", ")}</p>
+              </div>
+              <div className="rounded-lg border p-4">
+                <p className="text-sm text-muted-foreground">Developer Contact</p>
+                <p className="mt-1 font-medium">{status.developerEmail || "Uses current admin email"}</p>
               </div>
               <div className="rounded-lg border p-4">
                 <p className="text-sm text-muted-foreground">Data Source Status</p>
