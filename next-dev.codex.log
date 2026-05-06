@@ -1,0 +1,17 @@
+
+> dropskey@1.0.0 dev
+> next dev -p 3000
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.7s
+ ○ Compiling /contact ...
+ ✓ Compiled /contact in 6.3s (1134 modules)
+ GET /contact 200 in 6531ms
+ ○ Compiling /contact/api ...
+ ✓ Compiled /contact/api in 745ms (830 modules)
+ POST /contact/api 500 in 876ms
+ ✓ Compiled in 320ms (1383 modules)

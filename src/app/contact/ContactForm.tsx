@@ -170,7 +170,7 @@ export default function ContactForm() {
                   <p className="text-sm text-red-600">{turnstileError}</p>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    Complete the security check to enable the send button.
+                    Complete the security check before sending your message.
                   </p>
                 )}
               </div>
@@ -180,7 +180,7 @@ export default function ContactForm() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting || !isTurnstileConfigured || !turnstileToken}>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

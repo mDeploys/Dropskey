@@ -4,6 +4,30 @@ import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { sendMail } from '@/lib/postmark'
 
+function getSupabaseAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const supabaseAdminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY
+
+  if (!supabaseUrl) {
+    throw new Error('Supabase URL is not configured.')
+  }
+
+  if (!supabaseAdminKey) {
+    throw new Error('Supabase admin key is not configured.')
+  }
+
+  return createClient(supabaseUrl, supabaseAdminKey)
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // Helper function to generate SHA-256 hash using Web Crypto API (Edge Runtime compatible)
 async function sha256(message: string) {
   const msgBuffer = new TextEncoder().encode(message);
@@ -58,12 +82,9 @@ export async function POST(req: NextRequest) {
   };
 
   const ip = getClientIp(req);
-  const supabaseAdmin = createClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL)!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
 
   try {
+    const supabaseAdmin = getSupabaseAdminClient()
     const body = await req.json()
     const validation = contactSchema.safeParse(body)
 
@@ -134,16 +155,23 @@ export async function POST(req: NextRequest) {
     try {
       const toAddress = process.env.POSTMARK_TO || 'support@dropskey.com'
       const fromAddress = process.env.POSTMARK_FROM || 'no-reply@dropskey.com'
+      const safeName = escapeHtml(name)
+      const safeEmail = escapeHtml(email)
+      const safeSubject = escapeHtml(subject)
+      const safeMessage = escapeHtml(message).replace(/\n/g, '<br>')
+      const safeIp = ip ? escapeHtml(ip) : 'Unknown'
+
       await sendMail({
         to: toAddress,
         subject: `New Contact Form Submission: ${subject}`,
         html: `
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>IP Address:</strong> ${ip}</p>
+          <p><strong>Name:</strong> ${safeName}</p>
+          <p><strong>Email:</strong> ${safeEmail}</p>
+          <p><strong>Subject:</strong> ${safeSubject}</p>
+          <p><strong>IP Address:</strong> ${safeIp}</p>
           <hr>
           <p><strong>Message:</strong></p>
-          <p>${message}</p>
+          <p>${safeMessage}</p>
         `,
         from: fromAddress,
         replyTo: email,
