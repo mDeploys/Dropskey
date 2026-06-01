@@ -1,7 +1,9 @@
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Inter } from "next/font/google"
+import type { Metadata, Viewport } from "next"
 import Script from "next/script"
 import "./globals.css"
+import { getSiteUrl, siteConfig } from "@/lib/site"
 
 // Import providers
 import { SessionProvider } from "@/context/session-context"
@@ -16,6 +18,75 @@ import ClientLayout from "./client-layout"
 
 const inter = Inter({ subsets: ["latin"] })
 
+const siteUrl = getSiteUrl()
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Dropskey | Genuine Software Licenses and Digital Keys",
+    template: "%s | Dropskey",
+  },
+  description: siteConfig.description,
+  keywords: [
+    "Dropskey",
+    "digital keys",
+    "software licenses",
+    "Windows license",
+    "Microsoft Office key",
+    "antivirus license",
+    "Kaspersky",
+    "Adobe software",
+    "Autodesk software",
+  ],
+  applicationName: siteConfig.name,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    siteName: siteConfig.name,
+    title: "Dropskey | Genuine Software Licenses and Digital Keys",
+    description: siteConfig.description,
+    images: [
+      {
+        url: "/images/dropskey-logo.png",
+        alt: "Dropskey digital software store",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dropskey | Genuine Software Licenses and Digital Keys",
+    description: siteConfig.description,
+    images: ["/images/dropskey-logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    apple: "/icon.png",
+  },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -23,6 +94,7 @@ export default function RootLayout({
 }) {
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID
   const gaMeasurementId = 'G-BNKL9RH1XV' // Your Google Analytics 4 Measurement ID
+  const facebookPixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID
   const publicEnv = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? null,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? null,
@@ -35,8 +107,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Google tag (gtag.js) */}
-        <Script async src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`} />
-        <Script id="google-analytics">
+        <Script strategy="lazyOnload" src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`} />
+        <Script id="google-analytics" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
@@ -46,8 +118,9 @@ export default function RootLayout({
         </Script>
 
         {/* Facebook Pixel Code */}
-        <Script id="facebook-pixel" strategy="afterInteractive">
-          {`
+        {facebookPixelId && (
+          <Script id="facebook-pixel" strategy="lazyOnload">
+            {`
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
             n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -56,10 +129,11 @@ export default function RootLayout({
             t.src=v;s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '1336422264541509');
+            fbq('init', '${facebookPixelId}');
             fbq('track', 'PageView');
           `}
-        </Script>
+          </Script>
+        )}
         <Script id="public-env" strategy="beforeInteractive">
           {`window.__PUBLIC_ENV = ${JSON.stringify(publicEnv)};`}
         </Script>

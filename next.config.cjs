@@ -7,6 +7,20 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  images: {
+    domains: ['notncpmpmgostfxesrvk.supabase.co'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'notncpmpmgostfxesrvk.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+    ],
+  },
 
   env: { // Re-adding the env block
     // Publicly exposed variables (NEXT_PUBLIC_ prefix)
